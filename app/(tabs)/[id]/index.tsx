@@ -8,6 +8,8 @@ import {
   TouchableOpacity,
   ImageBackground,
 } from "react-native";
+import Slider from "@react-native-community/slider";
+
 import * as MediaLibrary from "expo-media-library";
 import { Audio } from "expo-av";
 import AntDesign from "@expo/vector-icons/AntDesign";
@@ -16,18 +18,28 @@ import Ionicons from "@expo/vector-icons/build/Ionicons";
 import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
 
 export default function PlayScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, isCUrrentlyPlaying } = useLocalSearchParams();
+
   const [audioFile, setAudioFile] = useState<MediaLibrary.Asset | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [audioFiles, setAudioFiles] = useState<MediaLibrary.Asset[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState<boolean>(false);
+  const [positionMillis, setPositionMillis] = useState<number>(0);
+  const [durationMillis, setDurationMillis] = useState<number>(1);
 
   useEffect(() => {
+    if (isCUrrentlyPlaying) {
+      setIsPlaying(true);
+    }
+
     loadAudioFiles();
     return () => {
       if (sound) {
         sound.unloadAsync();
+      }
+      if (progressInterval) {
+        clearInterval(progressInterval);
       }
     };
   }, []);
@@ -63,6 +75,9 @@ export default function PlayScreen() {
   //   }
   // };
 
+  // Change this line
+  let progressInterval: NodeJS.Timeout | null = null;
+
   const playSound = async (uri: string) => {
     if (sound) {
       await sound.stopAsync();
@@ -77,10 +92,28 @@ export default function PlayScreen() {
 
       // Set playback status update to handle end of playback
       newSound.setOnPlaybackStatusUpdate((status) => {
-        if (status.isLoaded && status.didJustFinish) {
-          handleNext(); // Automatically play next when current track ends
+        if (status.isLoaded) {
+          console.log("status.positionMillis", status.positionMillis);
+          setPositionMillis(status.positionMillis);
+          if (status.durationMillis) {
+            setDurationMillis(status.durationMillis);
+          }
+
+          if (status.didJustFinish) {
+            handleNext(); // Automatically play next when current track ends
+          }
         }
       });
+
+      // Start the interval to update the position during playback
+      progressInterval = setInterval(async () => {
+        if (newSound && isPlaying) {
+          const status = await newSound.getStatusAsync();
+          if (status.isLoaded) {
+            setPositionMillis(status.positionMillis);
+          }
+        }
+      }, 500); // Update every 500 milliseconds
     } catch (error) {
       console.error("Error playing audio:", error);
     }
@@ -90,8 +123,19 @@ export default function PlayScreen() {
     if (sound) {
       if (isPlaying) {
         await sound.pauseAsync();
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
       } else {
         await sound.playAsync();
+        progressInterval = setInterval(async () => {
+          if (sound && isPlaying) {
+            const status = await sound.getStatusAsync();
+            if (status.isLoaded) {
+              setPositionMillis(status.positionMillis);
+            }
+          }
+        }, 500); // Update every 500 milliseconds
       }
       setIsPlaying(!isPlaying);
     }
@@ -110,6 +154,12 @@ export default function PlayScreen() {
       const prevIndex = currentIndex - 1;
       setCurrentIndex(prevIndex);
       playSound(audioFiles[prevIndex].uri);
+    }
+  };
+
+  const handleSeek = async (value: number) => {
+    if (sound) {
+      await sound.setPositionAsync(value);
     }
   };
 
@@ -145,60 +195,73 @@ export default function PlayScreen() {
           </View>
 
           <View>
-            <Text className="text-white">
+            <Text className="text-white text-center">
               {audioFiles[currentIndex].filename}
             </Text>
+
+            <View className="py-4">
+              <Slider
+                minimumValue={0}
+                maximumValue={durationMillis}
+                value={positionMillis}
+                onValueChange={handleSeek}
+                minimumTrackTintColor="#FFAE00"
+                maximumTrackTintColor="#D3D3D3"
+                thumbTintColor="#FFAE00"
+              />
+            </View>
+
             <Text className="text-white">
-              {audioFiles[currentIndex].filename}
+              {Math.floor(positionMillis / 100000)}s /{" "}
+              {Math.floor(durationMillis / 100000)}s
             </Text>
-            <Text className="text-white">Progress bar</Text>
 
             <View className="flex flex-row items-center justify-between px-12">
               <FontAwesome name="random" size={24} color="white" />
 
               <View className="flex flex-row items-center justify-between gap-2">
-              <Ionicons
-                onPress={handlePrevious}
-                disabled={currentIndex === 0}
-                name="play-skip-back"
-                size={24}
-                color="white"
-              />
-              {isPlaying ? (
-                <TouchableOpacity onPress={handlePauseResume}>
-                  <Ionicons
-                    className="p-4 bg-[#FFAE00] rounded-full items-center"
-                    name="pause"
-                    size={24}
-                    color="white"
-                  />
-                </TouchableOpacity>
-              ) : (
-                <TouchableOpacity onPress={handlePauseResume}>
-                  <Ionicons
-                    className="p-4 bg-[#FFAE00] rounded-full items-center"
-                    name="play"
-                    size={24}
-                    color="white"
-                  />
-                </TouchableOpacity>
-              )}
+                <Ionicons
+                  onPress={handlePrevious}
+                  disabled={currentIndex === 0}
+                  name="play-skip-back"
+                  size={24}
+                  color="white"
+                />
+                {isPlaying ? (
+                  <TouchableOpacity onPress={handlePauseResume}>
+                    <Ionicons
+                      className="p-4 bg-[#FFAE00] rounded-full items-center"
+                      name="pause"
+                      size={24}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={handlePauseResume}>
+                    <Ionicons
+                      className="p-4 bg-[#FFAE00] rounded-full items-center"
+                      name="play"
+                      size={24}
+                      color="white"
+                    />
+                  </TouchableOpacity>
+                )}
 
-              <Ionicons
-                onPress={handleNext}
-                disabled={currentIndex === audioFiles.length - 1}
-                name="play-skip-forward"
-                size={24}
-                color="white"
-              />
+                <Ionicons
+                  onPress={handleNext}
+                  disabled={currentIndex === audioFiles.length - 1}
+                  name="play-skip-forward"
+                  size={24}
+                  color="white"
+                />
               </View>
 
               <FontAwesome6 name="repeat" size={24} color="white" />
             </View>
 
-            <View className="flex flex-row justify-between items-center p-2">
-            <AntDesign name="sharealt" size={24} color="white" />
-            <Ionicons name="list" size={24} color="white" />
+            <View className="flex flex-row justify-between items-center px-4">
+              <AntDesign name="sharealt" size={24} color="white" />
+              <Ionicons name="list" size={24} color="white" />
             </View>
           </View>
         </ImageBackground>
