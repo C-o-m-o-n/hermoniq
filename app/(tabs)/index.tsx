@@ -93,7 +93,7 @@ const currentSound = useRef<Audio.Sound | null>(null);
             <Link
             href={{
               pathname: "/(tabs)/[id]",
-              params: { id: file.id }
+              params: { id: file.id, isCUrrentlyPlaying: "true" }
             }}
             asChild
             key={index}
