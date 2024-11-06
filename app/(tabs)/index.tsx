@@ -1,72 +1,58 @@
-import { useState, useEffect } from 'react';
-import { Button, Text, SafeAreaView, ScrollView, StyleSheet, Image, View, Platform, StatusBar } from 'react-native';
-import * as MediaLibrary from 'expo-media-library';
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-// import "./../../native.css";
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0,
-  },
-  albumContainer: {
-    marginBottom: 20,
-  },
-  albumAssetsContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
-});
+import { useState, useEffect } from "react";
+import {
+  Button,
+  Text,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Image,
+  View,
+  Platform,
+  StatusBar,
+} from "react-native";
+import * as MediaLibrary from "expo-media-library";
+import { HelloWave } from "@/components/HelloWave";
+import ParallaxScrollView from "@/components/ParallaxScrollView";
+import { ThemedText } from "@/components/ThemedText";
+import { ThemedView } from "@/components/ThemedView";
+import { Audio } from "expo-av";
 
 export default function HomeScreen() {
+  const [sound, setSound] = useState<Audio.Sound | undefined>(undefined);
 
-  const [albums, setAlbums] = useState<MediaLibrary.Album[]>([]);
-  const [permissionResponse, requestPermission] = MediaLibrary.usePermissions();
+  useEffect(() => {
+    return sound
+      ? () => {
+          console.log('Unloading Sound');
+          sound.unloadAsync();
+        }
+      : undefined;
+  }, [sound]);
 
-  async function getAlbums() {
-    if (permissionResponse?.status !== 'granted') {
-      await requestPermission();
-    }
-    const fetchedAlbums = await MediaLibrary.getAlbumsAsync({
-      includeSmartAlbums: true,
-    });
-    setAlbums(fetchedAlbums);
+
+  async function playSound() {
+    console.log("Loading Sound");
+    const { sound } = await Audio.Sound.createAsync( require("../../assets/audio/soulsweeper.mp3")
+    );
+    setSound(sound);
+
+    console.log('Playing Sound');
+    await sound.playAsync();
   }
 
+
   return (
-    <SafeAreaView style={styles.container}>
-      <Button onPress={getAlbums} title="Get albums" />
-      <ScrollView>
-        {albums && albums.map((album) => <AlbumEntry album={album} />)}
+    <SafeAreaView
+      className={`flex-1  ${
+        Platform.OS === "android" ? StatusBar.currentHeight : 10
+      }`}
+    >
+      <ScrollView className="flex-1">
+        <ThemedText>Home</ThemedText>
+        <Button title="Play Sound" onPress={playSound} />
       </ScrollView>
     </SafeAreaView>
   );
-
-  
-function AlbumEntry({ album }: { album: MediaLibrary.Album }) {
-  const [assets, setAssets] = useState<MediaLibrary.Asset[]>([]);
-
-  useEffect(() => {
-    async function getAlbumAssets() {
-      const albumAssets = await MediaLibrary.getAssetsAsync({ album });
-      setAssets(albumAssets.assets);
-    }
-    getAlbumAssets();
-  }, [album]);
-
-  return (
-    <View key={album.id} style={styles.albumContainer}>
-      <Text>
-        {album.title} - {album.assetCount ?? 'no'} assets
-      </Text>
-      <View style={styles.albumAssetsContainer}>
-        {assets && assets.map((asset) => (
-          <Image source={{ uri: asset.uri }} width={50} height={50} />
-        ))}
-      </View>
-    </View>
-  );
 }
-}
+
+const styles = StyleSheet.create({});
