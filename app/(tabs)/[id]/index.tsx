@@ -1,13 +1,6 @@
-import { useRouter, useLocalSearchParams, router } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
 import { useEffect, useState } from "react";
-import {
-  View,
-  Text,
-  Button,
-  Touchable,
-  TouchableOpacity,
-  ImageBackground,
-} from "react-native";
+import { View, Text, TouchableOpacity, ImageBackground } from "react-native";
 import Slider from "@react-native-community/slider";
 
 import * as MediaLibrary from "expo-media-library";
@@ -66,46 +59,44 @@ export default function PlayScreen() {
     }
   };
 
-  // const loadAudioFile = async () => {
-  //   try {
-  //     const asset = await MediaLibrary.getAssetInfoAsync(id as string);
-  //     setAudioFile(asset);
-  //   } catch (error) {
-  //     console.error("Error loading audio file:", error);
-  //   }
-  // };
-
-  // Change this line
   let progressInterval: NodeJS.Timeout | null = null;
 
   const playSound = async (uri: string) => {
-    if (sound) {
-      await sound.stopAsync();
-      await sound.unloadAsync();
-    }
-
-    const newSound = new Audio.Sound();
     try {
+      // Stop and unload the current sound if it exists
+      if (sound) {
+        await sound.stopAsync();
+        await sound.unloadAsync();
+        setSound(null);
+        setIsPlaying(false);
+        if (progressInterval) {
+          clearInterval(progressInterval);
+        }
+      }
+
+      // Load and play the new sound
+      const newSound = new Audio.Sound();
       await newSound.loadAsync({ uri });
       await newSound.playAsync();
       setSound(newSound);
+      setIsPlaying(true);
 
-      // Set playback status update to handle end of playback
+      // Update the playback status and handle end of playback
       newSound.setOnPlaybackStatusUpdate((status) => {
         if (status.isLoaded) {
-          console.log("status.positionMillis", status.positionMillis);
           setPositionMillis(status.positionMillis);
           if (status.durationMillis) {
             setDurationMillis(status.durationMillis);
           }
 
           if (status.didJustFinish) {
-            handleNext(); // Automatically play next when current track ends
+            setIsPlaying(false);
+            handleNext(); // Play the next track when current ends
           }
         }
       });
 
-      // Start the interval to update the position during playback
+      // Start the interval to update the position
       progressInterval = setInterval(async () => {
         if (newSound && isPlaying) {
           const status = await newSound.getStatusAsync();
@@ -113,7 +104,7 @@ export default function PlayScreen() {
             setPositionMillis(status.positionMillis);
           }
         }
-      }, 500); // Update every 500 milliseconds
+      }, 500);
     } catch (error) {
       console.error("Error playing audio:", error);
     }
@@ -163,6 +154,20 @@ export default function PlayScreen() {
     }
   };
 
+  // Function to format milliseconds into hh:mm:ss
+  const formatTime = (millis: number) => {
+    const totalSeconds = Math.floor(millis / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const hoursDisplay = hours > 0 ? `${hours}:` : ""; // Include hours only if greater than 0
+    const minutesDisplay = `${minutes < 10 && hours > 0 ? "0" : ""}${minutes}:`; // Pad minutes if hours are shown
+    const secondsDisplay = `${seconds < 10 ? "0" : ""}${seconds}`; // Pad seconds with leading zero
+
+    return `${hoursDisplay}${minutesDisplay}${secondsDisplay}`;
+  };
+
   const bgImageUri = {
     uri: "https://images.unsplash.com/photo-1730541843784-09aceb8a1b63?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxmZWF0dXJlZC1waG90b3MtZmVlZHwyM3x8fGVufDB8fHx8fA%3D%3D",
   };
@@ -173,7 +178,7 @@ export default function PlayScreen() {
         <ImageBackground
           source={bgImageUri}
           resizeMode="cover"
-          className="flex-1 pt-6 justify-between"
+          className="flex-1 py-6 justify-between"
         >
           <View className="flex flex-row items-center justify-between px-4">
             <TouchableOpacity onPress={() => router.back()}>
@@ -199,7 +204,7 @@ export default function PlayScreen() {
               {audioFiles[currentIndex].filename}
             </Text>
 
-            <View className="py-4">
+            <View className="pt-4">
               <Slider
                 minimumValue={0}
                 maximumValue={durationMillis}
@@ -211,15 +216,16 @@ export default function PlayScreen() {
               />
             </View>
 
-            <Text className="text-white">
-              {Math.floor(positionMillis / 100000)}s /{" "}
-              {Math.floor(durationMillis / 100000)}s
+              <View className="pl-4">
+              <Text className="text-white">
+              {formatTime(positionMillis)} / {formatTime(durationMillis)}
             </Text>
+              </View>
 
             <View className="flex flex-row items-center justify-between px-12">
               <FontAwesome name="random" size={24} color="white" />
 
-              <View className="flex flex-row items-center justify-between gap-2">
+              <View className="flex flex-row items-center justify-between gap-12">
                 <Ionicons
                   onPress={handlePrevious}
                   disabled={currentIndex === 0}
@@ -258,11 +264,11 @@ export default function PlayScreen() {
 
               <FontAwesome6 name="repeat" size={24} color="white" />
             </View>
-
             <View className="flex flex-row justify-between items-center px-4">
               <AntDesign name="sharealt" size={24} color="white" />
               <Ionicons name="list" size={24} color="white" />
             </View>
+
           </View>
         </ImageBackground>
       ) : (
