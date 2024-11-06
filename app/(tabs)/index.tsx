@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Button,
   Text,
@@ -22,7 +22,9 @@ export default function HomeScreen() {
   const [sound, setSound] = useState<Audio.Sound | undefined>(undefined);
   const [audioFiles, setAudioFiles] = useState<MediaLibrary.Asset[]>([]);
   const [currentSong, setCurrentSong] = useState(false);
-  
+  // Use a ref to keep track of the current playing sound
+const currentSound = useRef<Audio.Sound | null>(null);
+
 
   useEffect(() => {
     return sound
@@ -34,15 +36,25 @@ export default function HomeScreen() {
   }, [sound]);
 
   async function playSound(uri: string) {
+    // Stop and unload the current sound if it exists
+    if (currentSound.current) {
+      await currentSound.current.stopAsync();
+      await currentSound.current.unloadAsync();
+      currentSound.current = null; // Reset the ref
+    }
+  
     console.log("Loading Sound");
     const sound = new Audio.Sound();
     try {
+      // Load and play the new sound
       await sound.loadAsync({ uri });
       await sound.playAsync();
+      currentSound.current = sound; // Set the ref to the new sound
     } catch (error) {
       console.error('Error playing audio:', error);
     }
   }
+  
 
   const requestPermissions = async () => {
     const { status } = await MediaLibrary.requestPermissionsAsync();
