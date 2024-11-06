@@ -17,14 +17,14 @@ import ParallaxScrollView from "@/components/ParallaxScrollView";
 import { ThemedText } from "@/components/ThemedText";
 import { ThemedView } from "@/components/ThemedView";
 import { Audio } from "expo-av";
-
+import { BottomSheet } from "react-native-btr";
+import { Link } from "expo-router";
 export default function HomeScreen() {
   const [sound, setSound] = useState<Audio.Sound | undefined>(undefined);
   const [audioFiles, setAudioFiles] = useState<MediaLibrary.Asset[]>([]);
   const [currentSong, setCurrentSong] = useState(false);
   // Use a ref to keep track of the current playing sound
 const currentSound = useRef<Audio.Sound | null>(null);
-
 
   useEffect(() => {
     return sound
@@ -42,7 +42,6 @@ const currentSound = useRef<Audio.Sound | null>(null);
       await currentSound.current.unloadAsync();
       currentSound.current = null; // Reset the ref
     }
-  
     console.log("Loading Sound");
     const sound = new Audio.Sound();
     try {
@@ -55,7 +54,6 @@ const currentSound = useRef<Audio.Sound | null>(null);
     }
   }
   
-
   const requestPermissions = async () => {
     const { status } = await MediaLibrary.requestPermissionsAsync();
     if (status !== "granted") {
@@ -90,13 +88,21 @@ const currentSound = useRef<Audio.Sound | null>(null);
       }`}
     >
       <ScrollView className="flex-1 pt-6">
-        <ThemedText>Home</ThemedText>
-
         <View className="bg-red-400 p-2">
           {audioFiles.map((file, index) => (
-            <TouchableOpacity onPress={() => playSound(file.uri)} className="py-4" key={index}>
+            <Link
+            href={{
+              pathname: "/(tabs)/[id]",
+              params: { id: file.id }
+            }}
+            asChild
+            key={index}
+          >
+            <TouchableOpacity className="py-4">
               <ThemedText>{file.filename}</ThemedText>
             </TouchableOpacity>
+          </Link>
+            
           ))}
         </View>
 
