@@ -1,159 +1,40 @@
+import { View, Text, TouchableOpacity, ImageBackground } from "react-native";
+import { useMusic, MusicProvider } from "@/components/context/MusicContext";
+import Slider from "@react-native-community/slider";
+import Ionicons from "@expo/vector-icons/build/Ionicons";
+import AntDesign from "@expo/vector-icons/AntDesign";
+import MaterialIcons from "@expo/vector-icons/MaterialIcons";
+import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
+import { useLocalSearchParams, router } from "expo-router";
 
-// import { useEffect, useState } from "react";
-// import { View, Text, TouchableOpacity, ImageBackground } from "react-native";
-// import Slider from "@react-native-community/slider";
+export default function PlayScreen() {
+  const { audioFiles, currentSongIndex, isPlaying, handleSeek, positionMillis, durationMillis, pauseSong, resumeSong, nextSong, prevSong, audioFilesLoading, audioFilesError  } = useMusic();
+console.log("audioFiles", audioFiles);
+console.log("currentSongIndex", currentSongIndex);
 
-// import * as MediaLibrary from "expo-media-library";
-// import { Audio } from "expo-av";
-// import AntDesign from "@expo/vector-icons/AntDesign";
-// import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-// import Ionicons from "@expo/vector-icons/build/Ionicons";
-// import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
+//   if (currentSongIndex === -1 || audioFiles.length === 0) {
+//     return <Text>Loading...</Text>;
+// }
 
-// export default function PlayScreen() {
-//   const { id, isCUrrentlyPlaying } = useLocalSearchParams();
+// if (!audioFiles[currentSongIndex]) { //Conditional rendering added here.
+//     return <Text>Loading...</Text>;
+// }
 
-//   const [audioFile, setAudioFile] = useState<MediaLibrary.Asset | null>(null);
-//   const [sound, setSound] = useState<Audio.Sound | null>(null);
-//   const [audioFiles, setAudioFiles] = useState<MediaLibrary.Asset[]>([]);
-//   const [currentIndex, setCurrentIndex] = useState<number>(-1);
-//   const [isPlaying, setIsPlaying] = useState<boolean>(false);
-//   const [positionMillis, setPositionMillis] = useState<number>(0);
-//   const [durationMillis, setDurationMillis] = useState<number>(1);
+if (audioFilesLoading) {
+  return <Text>Loading audio files...</Text>;
+}
 
-//   useEffect(() => {
-//     if (isCUrrentlyPlaying) {
-//       setIsPlaying(true);
-//     }
+if (audioFilesError) {
+  return <Text>Error: {audioFilesError}</Text>;
+}
 
-//     loadAudioFiles();
-//     return () => {
-//       if (sound) {
-//         sound.unloadAsync();
-//       }
-//       if (progressInterval) {
-//         clearInterval(progressInterval);
-//       }
-//     };
-//   }, []);
+if (currentSongIndex === -1 || audioFiles.length === 0) {
+  return <Text>Loading song...</Text>;
+}
 
-//   useEffect(() => {
-//     if (id && audioFiles.length > 0) {
-//       const index = audioFiles.findIndex((file) => file.id === id);
-//       if (index !== -1) {
-//         setCurrentIndex(index);
-//         playSound(audioFiles[index].uri);
-//       }
-//     }
-//   }, [id, audioFiles]);
-
-//   const loadAudioFiles = async () => {
-//     try {
-//       const media = await MediaLibrary.getAssetsAsync({
-//         mediaType: MediaLibrary.MediaType.audio,
-//         first: 100,
-//       });
-//       setAudioFiles(media.assets);
-//     } catch (error) {
-//       console.error("Error fetching audio files:", error);
-//     }
-//   };
-
-//   let progressInterval: NodeJS.Timeout | null = null;
-
-//   const playSound = async (uri: string) => {
-//     try {
-//       // Stop and unload the current sound if it exists
-//       if (sound) {
-//         await sound.stopAsync();
-//         await sound.unloadAsync();
-//         setSound(null);
-//         setIsPlaying(false);
-//         if (progressInterval) {
-//           clearInterval(progressInterval);
-//         }
-//       }
-
-//       // Load and play the new sound
-//       const newSound = new Audio.Sound();
-//       await newSound.loadAsync({ uri });
-//       await newSound.playAsync();
-//       setSound(newSound);
-//       setIsPlaying(true);
-
-//       // Update the playback status and handle end of playback
-//       newSound.setOnPlaybackStatusUpdate((status) => {
-//         if (status.isLoaded) {
-//           setPositionMillis(status.positionMillis);
-//           if (status.durationMillis) {
-//             setDurationMillis(status.durationMillis);
-//           }
-
-//           if (status.didJustFinish) {
-//             setIsPlaying(false);
-//             handleNext(); // Play the next track when current ends
-//           }
-//         }
-//       });
-
-//       // Start the interval to update the position
-//       progressInterval = setInterval(async () => {
-//         if (newSound && isPlaying) {
-//           const status = await newSound.getStatusAsync();
-//           if (status.isLoaded) {
-//             setPositionMillis(status.positionMillis);
-//           }
-//         }
-//       }, 500);
-//     } catch (error) {
-//       console.error("Error playing audio:", error);
-//     }
-//   };
-
-//   const handlePauseResume = async () => {
-//     if (sound) {
-//       if (isPlaying) {
-//         await sound.pauseAsync();
-//         if (progressInterval) {
-//           clearInterval(progressInterval);
-//         }
-//       } else {
-//         await sound.playAsync();
-//         progressInterval = setInterval(async () => {
-//           if (sound && isPlaying) {
-//             const status = await sound.getStatusAsync();
-//             if (status.isLoaded) {
-//               setPositionMillis(status.positionMillis);
-//             }
-//           }
-//         }, 500); // Update every 500 milliseconds
-//       }
-//       setIsPlaying(!isPlaying);
-//     }
-//   };
-
-//   const handleNext = () => {
-//     if (audioFiles.length > 0 && currentIndex < audioFiles.length - 1) {
-//       const nextIndex = currentIndex + 1;
-//       setCurrentIndex(nextIndex);
-//       playSound(audioFiles[nextIndex].uri);
-//     }
-//   };
-
-//   const handlePrevious = () => {
-//     if (audioFiles.length > 0 && currentIndex > 0) {
-//       const prevIndex = currentIndex - 1;
-//       setCurrentIndex(prevIndex);
-//       playSound(audioFiles[prevIndex].uri);
-//     }
-//   };
-
-//   const handleSeek = async (value: number) => {
-//     if (sound) {
-//       await sound.setPositionAsync(value);
-//     }
-//   };
-
+if (!audioFiles[currentSongIndex]) {
+  return <Text>Loading song...</Text>;
+}
   // Function to format milliseconds into hh:mm:ss
   const formatTime = (millis: number) => {
     const totalSeconds = Math.floor(millis / 1000);
@@ -167,23 +48,6 @@
 
     return `${hoursDisplay}${minutesDisplay}${secondsDisplay}`;
   };
-
-
-import { View, Text, TouchableOpacity, ImageBackground } from "react-native";
-import { useMusic, MusicProvider } from "@/components/context/MusicContext";
-import Slider from "@react-native-community/slider";
-import Ionicons from "@expo/vector-icons/build/Ionicons";
-import AntDesign from "@expo/vector-icons/AntDesign";
-import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { FontAwesome, FontAwesome6 } from "@expo/vector-icons";
-import { useLocalSearchParams, router } from "expo-router";
-
-export default function PlayScreen() {
-  const { audioFiles, currentSongIndex, isPlaying, handleSeek, positionMillis, durationMillis, pauseSong, resumeSong, nextSong, prevSong } = useMusic();
-
-  if (currentSongIndex === -1) {
-    return <Text>Loading...</Text>;
-  }
 
   return (
     <View className="h-full">
@@ -213,14 +77,14 @@ export default function PlayScreen() {
           </View>
 
 
-        <Text className="text-white text-center">
-          {audioFiles[currentSongIndex].filename}
-        </Text>
+          <Text className="text-white text-center">
+                    {audioFiles[currentSongIndex].filename}
+                </Text>
 
         <View>
-             <Text className="text-white text-center">
-             {audioFiles[currentSongIndex].filename}
-             </Text>
+        <Text className="text-white text-center">
+                    {audioFiles[currentSongIndex].filename}
+                </Text>
 
              <View className="pt-4">
                <Slider
@@ -233,6 +97,11 @@ export default function PlayScreen() {
                  thumbTintColor="#FFAE00"
                />
              </View>
+             <View className="pl-4">
+              <Text className="text-white">
+              {formatTime(positionMillis)} / {formatTime(durationMillis)}
+            </Text>
+              </View>
              </View>
 
           <View className="flex flex-row items-center justify-between px-12">
