@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import {
   Button,
   Text,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Image,
@@ -11,6 +10,7 @@ import {
   StatusBar,
   TouchableOpacity,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import * as MediaLibrary from "expo-media-library";
 import { HelloWave } from "@/components/HelloWave";
 import ParallaxScrollView from "@/components/ParallaxScrollView";
